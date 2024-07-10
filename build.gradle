@@ -24,16 +24,43 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web:3.2.3'
+	implementation 'org.springframework.boot:spring-boot-starter-validation:3.2.3'
+
+	/* MySQL*/
+	implementation group: 'com.mysql', name: 'mysql-connector-j', version: '8.3.0'
+
+	/* Redis */
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.redisson:redisson-spring-boot-starter:3.30.0'
+
+	/* JPA */
+	implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '3.2.3'
+
+	/* AOP */
+	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+	/* Lombok */
 	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
+	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+test {
+	useJUnitPlatform()
+	testLogging {
+		showStandardStreams = true
+		showCauses = true
+		showExceptions = true
+		showStackTraces = true
+		exceptionFormat = 'full'
+	}
 }
