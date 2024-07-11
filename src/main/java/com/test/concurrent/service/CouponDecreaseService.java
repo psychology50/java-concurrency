@@ -1,5 +1,6 @@
 package com.test.concurrent.service;
 
+import com.test.concurrent.aop.TimeCount;
 import com.test.concurrent.domain.Coupon;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,14 @@ public class CouponDecreaseService {
 
     @Transactional
     public void decreaseStock(Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
+
+        coupon.decreaseStock();
+    }
+
+    @Transactional
+    public synchronized void decreaseStockWithSynchronized(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 

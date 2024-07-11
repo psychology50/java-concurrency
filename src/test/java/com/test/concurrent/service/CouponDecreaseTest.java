@@ -1,5 +1,6 @@
 package com.test.concurrent.service;
 
+import com.test.concurrent.aop.TimeCount;
 import com.test.concurrent.domain.Coupon;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,16 +39,33 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("동시성 환경에서 300명 쿠폰 차감 테스트")
     void 쿠폰차감_동시성_300명_테스트() throws InterruptedException {
-        // given
-        int threadCount = 300;
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponDecreaseService::decreaseStock,
+                false
+        );
+    }
+
+    @Test
+    @DisplayName("synchronized: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponDecreaseService::decreaseStockWithSynchronized,
+                true
+        );
+    }
+
+    private void performConcurrencyTest(int threadCount, Long couponId, Consumer<Long> method, boolean expectedZero) throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
-        // when
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    couponDecreaseService.decreaseStock(coupon.getId());
+                    method.accept(couponId);
                 } finally {
                     latch.countDown();
                 }
@@ -54,9 +73,12 @@ public class CouponDecreaseTest {
         }
         latch.await();
 
-        // then
-        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
-        assertThat(persistedCoupon.getAvailableStock()).isNotZero(); // 잔여 쿠폰 수량은 0이 아니다.
+        Coupon persistedCoupon = couponRepository.findById(couponId).orElseThrow(IllegalArgumentException::new);
+        if (expectedZero) {
+            assertThat(persistedCoupon.getAvailableStock()).isZero();
+        } else {
+            assertThat(persistedCoupon.getAvailableStock()).isNotZero();
+        }
         log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 }
