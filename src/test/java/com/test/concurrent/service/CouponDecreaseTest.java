@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class CouponDecreaseTest {
     @Autowired
+    private CouponService couponService;
+    @Autowired
     private CouponDecreaseService couponDecreaseService;
     @Autowired
     private CouponRepository couponRepository;
@@ -37,7 +39,7 @@ public class CouponDecreaseTest {
     }
 
     @Test
-    @DisplayName("동시성 환경에서 300명 쿠폰 차감 테스트")
+    @DisplayName("실패 케이스: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 쿠폰차감_동시성_300명_테스트() throws InterruptedException {
         performConcurrencyTest(
                 300,
@@ -48,12 +50,23 @@ public class CouponDecreaseTest {
     }
 
     @Test
-    @DisplayName("synchronized: 동시성 환경에서 300명 쿠폰 차감 테스트")
-    void synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+    @DisplayName("synchronized<Non Tx>: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 선언적_트랜잭션_없이_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
                 couponDecreaseService::decreaseStockWithSynchronized,
+                true
+        );
+    }
+
+    @Test
+    @DisplayName("synchronized<외부 호출>: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 외부에서_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponService::decreaseStock,
                 true
         );
     }

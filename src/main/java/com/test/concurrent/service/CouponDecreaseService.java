@@ -22,11 +22,11 @@ public class CouponDecreaseService {
         coupon.decreaseStock();
     }
 
-    @Transactional
     public synchronized void decreaseStockWithSynchronized(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
         coupon.decreaseStock();
+        couponRepository.save(coupon);
     }
 }
