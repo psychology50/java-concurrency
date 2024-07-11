@@ -1,6 +1,5 @@
 package com.test.concurrent.service;
 
-import com.test.concurrent.aop.TimeCount;
 import com.test.concurrent.domain.Coupon;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CouponDecreaseService {
     private final CouponRepository couponRepository;
+    private static final Object lock = new Object();
 
     @Transactional
     public void decreaseStock(Long couponId) {

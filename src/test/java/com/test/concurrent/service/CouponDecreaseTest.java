@@ -1,6 +1,5 @@
 package com.test.concurrent.service;
 
-import com.test.concurrent.aop.TimeCount;
 import com.test.concurrent.domain.Coupon;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +64,18 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                couponService::decreaseStock,
+                couponService::decreaseStockWithSynchronized,
+                true
+        );
+    }
+
+    @Test
+    @DisplayName("ReentrantLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 내부에서_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponService::decreaseStockWithReentrantLock,
                 true
         );
     }
