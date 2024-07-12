@@ -2,8 +2,10 @@ package com.test.concurrent.service;
 
 import com.test.concurrent.domain.AtomicCoupon;
 import com.test.concurrent.domain.Coupon;
+import com.test.concurrent.domain.OptimisticCoupon;
 import com.test.concurrent.repository.AtomicCouponRepository;
 import com.test.concurrent.repository.CouponRepository;
+import com.test.concurrent.repository.OptimisticCouponRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +35,8 @@ public class CouponDecreaseTest {
     private CouponRepository couponRepository;
     @Autowired
     private AtomicCouponRepository atomicCouponRepository;
+    @Autowired
+    private OptimisticCouponRepository optimisticCouponRepository;
 
     private Coupon coupon;
 
@@ -48,9 +52,12 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                couponDecreaseService::decreaseStock,
-                false
+                couponDecreaseService::decreaseStock
         );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isNotZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 
     @Test
@@ -59,9 +66,12 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                couponDecreaseService::decreaseStockWithSynchronized,
-                true
+                couponDecreaseService::decreaseStockWithSynchronized
         );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 
     @Test
@@ -70,9 +80,12 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                couponService::decreaseStockWithSynchronized,
-                true
+                couponService::decreaseStockWithSynchronized
         );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 
     @Test
@@ -81,13 +94,16 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                couponService::decreaseStockWithReentrantLock,
-                true
+                couponService::decreaseStockWithReentrantLock
         );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 
     @Test
-    @DisplayName("Atomic: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    @DisplayName("실패 케이스: Atomic: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void Atomic_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
         AtomicCoupon coupon = new AtomicCoupon("COUPON_001", 300L);
         atomicCouponRepository.save(coupon);
@@ -95,12 +111,32 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                atomicCouponDecreaseService::decreaseStock,
-                false
+                atomicCouponDecreaseService::decreaseStock
         );
+
+        AtomicCoupon persistedCoupon = atomicCouponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock().get()).isNotZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 
-    private void performConcurrencyTest(int threadCount, Long couponId, Consumer<Long> method, boolean expectedZero) throws InterruptedException {
+    @Test
+    @DisplayName("OLock & CAS: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void OLock_CAS_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        OptimisticCoupon coupon = new OptimisticCoupon("COUPON_001", 300L);
+        optimisticCouponRepository.save(coupon);
+
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponService::decreaseStockWithOLockAndCAS
+        );
+
+        OptimisticCoupon persistedCoupon = optimisticCouponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+    }
+
+    private void performConcurrencyTest(int threadCount, Long couponId, Consumer<Long> method) throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -114,13 +150,5 @@ public class CouponDecreaseTest {
             });
         }
         latch.await();
-
-        Coupon persistedCoupon = couponRepository.findById(couponId).orElseThrow(IllegalArgumentException::new);
-        if (expectedZero) {
-            assertThat(persistedCoupon.getAvailableStock()).isZero();
-        } else {
-            assertThat(persistedCoupon.getAvailableStock()).isNotZero();
-        }
-        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
 }
