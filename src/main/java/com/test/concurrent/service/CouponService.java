@@ -29,6 +29,23 @@ public class CouponService {
         }
     }
 
+    public void decreaseStockWithAtomic(Long couponId) {
+        for (int attempt = 0; attempt < 100000; attempt++) {
+            try {
+                atomicCouponDecreaseService.decreaseStock(couponId);
+                return;
+            } catch (IllegalArgumentException e) {
+                try {
+                    Thread.sleep(ThreadLocalRandom.current().nextInt(100, 1000));
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        throw new IllegalStateException("재시도 횟수 초과");
+    }
+
     public void decreaseStockWithOLockAndCAS(Long couponId) {
         for (int attempt = 0; attempt < 100; attempt++) {
             try {
