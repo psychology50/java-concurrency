@@ -103,7 +103,7 @@ public class CouponDecreaseTest {
     }
 
     @Test
-    @DisplayName("실패 케이스: Atomic: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    @DisplayName("실패 테스트: Atomic & Timestamp: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void Atomic_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
         AtomicCoupon coupon = new AtomicCoupon("COUPON_001", 300L);
         atomicCouponRepository.save(coupon);
@@ -111,7 +111,7 @@ public class CouponDecreaseTest {
         performConcurrencyTest(
                 300,
                 coupon.getId(),
-                atomicCouponDecreaseService::decreaseStock
+                couponService::decreaseStockWithAtomic
         );
 
         AtomicCoupon persistedCoupon = atomicCouponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
