@@ -29,7 +29,7 @@ public class AtomicCoupon {
         this.availableStock = new AtomicLong(availableStock);
     }
 
-    public void decreaseStock() { // 실패하는 코드. 비교와 수정 원자적이지 않음.
+    public void decreaseStock() {
         validateStock();
         this.availableStock.decrementAndGet();
     }

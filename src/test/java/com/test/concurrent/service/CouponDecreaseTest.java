@@ -1,6 +1,8 @@
 package com.test.concurrent.service;
 
+import com.test.concurrent.domain.AtomicCoupon;
 import com.test.concurrent.domain.Coupon;
+import com.test.concurrent.repository.AtomicCouponRepository;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +28,11 @@ public class CouponDecreaseTest {
     @Autowired
     private CouponDecreaseService couponDecreaseService;
     @Autowired
+    private AtomicCouponDecreaseService atomicCouponDecreaseService;
+    @Autowired
     private CouponRepository couponRepository;
+    @Autowired
+    private AtomicCouponRepository atomicCouponRepository;
 
     private Coupon coupon;
 
@@ -77,6 +83,20 @@ public class CouponDecreaseTest {
                 coupon.getId(),
                 couponService::decreaseStockWithReentrantLock,
                 true
+        );
+    }
+
+    @Test
+    @DisplayName("Atomic: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void Atomic_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        AtomicCoupon coupon = new AtomicCoupon("COUPON_001", 300L);
+        atomicCouponRepository.save(coupon);
+
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                atomicCouponDecreaseService::decreaseStock,
+                false
         );
     }
 
