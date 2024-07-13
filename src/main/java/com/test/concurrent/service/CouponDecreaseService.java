@@ -1,5 +1,6 @@
 package com.test.concurrent.service;
 
+import com.test.concurrent.aop.DistributedLock;
 import com.test.concurrent.domain.Coupon;
 import com.test.concurrent.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,13 @@ public class CouponDecreaseService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
         coupon.decreaseStock();
-        couponRepository.saveAndFlush(coupon);
+    }
+
+    @DistributedLock(key = "#key")
+    public void decreaseStockWithDistributedLock(Long couponId, String key) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
+
+        coupon.decreaseStock();
     }
 }
