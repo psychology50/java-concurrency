@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CouponDecreaseService {
     private final CouponRepository couponRepository;
-    private static final Object lock = new Object();
 
     @Transactional
     public void decreaseStock(Long couponId) {
@@ -32,9 +31,10 @@ public class CouponDecreaseService {
 
     @Transactional
     public void decreaseStockWithPLock(Long couponId) {
-        Coupon coupon = couponRepository.findById(couponId)
+        Coupon coupon = couponRepository.findByIdWithPLock(couponId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
         coupon.decreaseStock();
+        couponRepository.saveAndFlush(coupon);
     }
 }
