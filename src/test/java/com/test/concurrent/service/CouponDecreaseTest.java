@@ -11,9 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.data.redis.AutoConfigureDataRedis;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -145,6 +145,29 @@ public class CouponDecreaseTest {
                 coupon.getId(),
                 couponDecreaseService::decreaseStockWithPLock
         );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+    }
+
+    @Test
+    @DisplayName("DistributedLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 분산_락_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        int threadCount = 300;
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    couponDecreaseService.decreaseStockWithDistributedLock(coupon.getId(), coupon.getName());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
 
         Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
         assertThat(persistedCoupon.getAvailableStock()).isZero();
