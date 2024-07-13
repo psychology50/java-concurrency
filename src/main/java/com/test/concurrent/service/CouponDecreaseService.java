@@ -29,4 +29,12 @@ public class CouponDecreaseService {
         coupon.decreaseStock();
         couponRepository.save(coupon);
     }
+
+    @Transactional
+    public void decreaseStockWithPLock(Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
+
+        coupon.decreaseStock();
+    }
 }
