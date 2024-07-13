@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -132,6 +133,20 @@ public class CouponDecreaseTest {
         );
 
         OptimisticCoupon persistedCoupon = optimisticCouponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+    }
+
+    @Test
+    @DisplayName("PLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 비관적_락_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        performConcurrencyTest(
+                300,
+                coupon.getId(),
+                couponDecreaseService::decreaseStockWithPLock
+        );
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
         assertThat(persistedCoupon.getAvailableStock()).isZero();
         log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
     }
