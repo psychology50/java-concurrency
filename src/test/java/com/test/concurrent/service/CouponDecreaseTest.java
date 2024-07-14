@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.redis.AutoConfigureDataRedis;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +39,12 @@ public class CouponDecreaseTest {
     private AtomicCouponRepository atomicCouponRepository;
     @Autowired
     private OptimisticCouponRepository optimisticCouponRepository;
+
+    @Autowired
+    private CouponTransactionSaveService couponTransactionSaveService;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
 
     private Coupon coupon;
 
@@ -172,6 +179,33 @@ public class CouponDecreaseTest {
         Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
         assertThat(persistedCoupon.getAvailableStock()).isZero();
         log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+    }
+
+    @Test
+    @DisplayName("Sorted Set: 동시성 환경에서 400명 쿠폰 차감 테스트")
+    void 정렬_집합_쿠폰차감_동시성_400명_테스트() throws InterruptedException {
+        int threadCount = 400;
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    couponDecreaseService.registerCouponRequest(coupon.getId(), coupon.getName());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        couponTransactionSaveService.saveAll(coupon.getId(), coupon.getName());
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+
+        redisTemplate.delete(coupon.getId() + ":" + coupon.getName());
     }
 
     private void performConcurrencyTest(int threadCount, Long couponId, Consumer<Long> method) throws InterruptedException {
