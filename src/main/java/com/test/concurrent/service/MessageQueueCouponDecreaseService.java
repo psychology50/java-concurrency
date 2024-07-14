@@ -20,7 +20,7 @@ public class MessageQueueCouponDecreaseService {
     private final CouponRepository couponRepository;
     private final BlockingQueue<String> couponQueue = new LinkedBlockingQueue<>();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor(); // 워커 스레드
-    private final AtomicInteger messageCount = new AtomicInteger(300);
+    private final AtomicInteger messageCount = new AtomicInteger(700);
 
     @PostConstruct
     public void init() {

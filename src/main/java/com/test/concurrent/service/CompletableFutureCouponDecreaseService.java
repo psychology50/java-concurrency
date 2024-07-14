@@ -21,7 +21,6 @@ public class CompletableFutureCouponDecreaseService {
             Runtime.getRuntime().availableProcessors()
     );
 
-    @Transactional
     public CompletableFuture<Void> decreaseStockWithCompletableFuture(Long couponId) {
         return CompletableFuture.runAsync(() -> {
             log.info("쿠폰 차감을 시작합니다. couponId={}", couponId);

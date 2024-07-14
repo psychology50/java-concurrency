@@ -14,9 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,19 +41,19 @@ public class CouponDecreaseTest {
     @Autowired
     private CouponTransactionSaveService couponTransactionSaveService;
 
-    private Coupon coupon;
+    private static final int THREAD_COUNT = 700;
+    private static final long COUPON_COUNT = 700L;
 
-    @BeforeEach
-    void setUp() {
-        coupon = new Coupon("COUPON_001", 300L);
-        couponRepository.save(coupon);
-    }
+    private Coupon coupon;
 
     @Test
     @DisplayName("실패 케이스: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
+
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponDecreaseService::decreaseStock
         );
@@ -66,8 +66,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("synchronized<Non Tx>: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 선언적_트랜잭션_없이_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
+
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponDecreaseService::decreaseStockWithSynchronized
         );
@@ -80,8 +83,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("synchronized<외부 호출>: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 외부에서_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
+
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponService::decreaseStockWithSynchronized
         );
@@ -94,8 +100,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("ReentrantLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 내부에서_synchronized_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
+
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponService::decreaseStockWithReentrantLock
         );
@@ -108,11 +117,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("실패 테스트: Atomic & Timestamp: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void Atomic_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
-        AtomicCoupon coupon = new AtomicCoupon("COUPON_001", 300L);
+        AtomicCoupon coupon = new AtomicCoupon("COUPON_001", COUPON_COUNT);
         atomicCouponRepository.save(coupon);
 
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponService::decreaseStockWithAtomic
         );
@@ -125,11 +134,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("OLock & CAS: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void OLock_CAS_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
-        OptimisticCoupon coupon = new OptimisticCoupon("COUPON_001", 300L);
+        OptimisticCoupon coupon = new OptimisticCoupon("COUPON_001", COUPON_COUNT);
         optimisticCouponRepository.save(coupon);
 
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponService::decreaseStockWithOLockAndCAS
         );
@@ -142,8 +151,11 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("PLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 비관적_락_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
+
         performConcurrencyTest(
-                300,
+                THREAD_COUNT,
                 coupon.getId(),
                 couponDecreaseService::decreaseStockWithPLock
         );
@@ -156,11 +168,13 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("DistributedLock: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 분산_락_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
-        int threadCount = 300;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
 
-        for (int i = 0; i < threadCount; i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
+        CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+
+        for (int i = 0; i < THREAD_COUNT; i++) {
             executorService.submit(() -> {
                 try {
                     couponDecreaseService.decreaseStockWithDistributedLock(coupon.getId(), coupon.getName());
@@ -179,11 +193,13 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("Sorted Set: 동시성 환경에서 400명 쿠폰 차감 테스트")
     void 정렬_집합_쿠폰차감_동시성_400명_테스트() throws InterruptedException {
-        int threadCount = 400;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
 
-        for (int i = 0; i < threadCount; i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
+        CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+
+        for (int i = 0; i < THREAD_COUNT; i++) {
             executorService.submit(() -> {
                 try {
                     couponDecreaseService.registerCouponRequest(coupon.getId(), coupon.getName());
@@ -204,11 +220,13 @@ public class CouponDecreaseTest {
     @Test
     @DisplayName("Messaging Queue: 동시성 환경에서 300명 쿠폰 차감 테스트")
     void 메시징_큐_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
-        int threadCount = 300;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        Coupon coupon = new Coupon("COUPON_001", COUPON_COUNT);
+        couponRepository.save(coupon);
 
-        for (int i = 0; i < threadCount; i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
+        CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+
+        for (int i = 0; i < THREAD_COUNT; i++) {
             executorService.submit(() -> {
                 try {
                     messageQueueCouponDecreaseService.decreaseStockWithMessagingQueue(coupon.getId());

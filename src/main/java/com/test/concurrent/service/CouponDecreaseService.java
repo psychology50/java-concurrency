@@ -53,7 +53,7 @@ public class CouponDecreaseService {
 
     public boolean registerCouponRequest(Long couponId, String key) {
         String threadId = String.valueOf(Thread.currentThread().getId());
-        String maxRequestCount = "300";
+        String maxRequestCount = "1000";
 
         String luaScript =
                 "local count = redis.call('ZCARD', KEYS[1]) " +
