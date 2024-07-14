@@ -35,6 +35,8 @@ public class CouponDecreaseTest {
     private AtomicCouponRepository atomicCouponRepository;
     @Autowired
     private OptimisticCouponRepository optimisticCouponRepository;
+    @Autowired
+    private MessageQueueCouponDecreaseService messageQueueCouponDecreaseService;
 
     @Autowired
     private CouponTransactionSaveService couponTransactionSaveService;
@@ -193,6 +195,31 @@ public class CouponDecreaseTest {
         latch.await();
 
         couponTransactionSaveService.saveAll(coupon.getId(), coupon.getName());
+
+        Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
+        assertThat(persistedCoupon.getAvailableStock()).isZero();
+        log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
+    }
+
+    @Test
+    @DisplayName("Messaging Queue: 동시성 환경에서 300명 쿠폰 차감 테스트")
+    void 메시징_큐_쿠폰차감_동시성_300명_테스트() throws InterruptedException {
+        int threadCount = 300;
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    messageQueueCouponDecreaseService.decreaseStockWithMessagingQueue(coupon.getId());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        messageQueueCouponDecreaseService.waitForCompletion();
 
         Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
         assertThat(persistedCoupon.getAvailableStock()).isZero();
