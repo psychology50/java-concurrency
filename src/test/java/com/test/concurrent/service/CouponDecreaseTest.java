@@ -11,10 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.data.redis.AutoConfigureDataRedis;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -32,8 +30,6 @@ public class CouponDecreaseTest {
     @Autowired
     private CouponDecreaseService couponDecreaseService;
     @Autowired
-    private AtomicCouponDecreaseService atomicCouponDecreaseService;
-    @Autowired
     private CouponRepository couponRepository;
     @Autowired
     private AtomicCouponRepository atomicCouponRepository;
@@ -42,9 +38,6 @@ public class CouponDecreaseTest {
 
     @Autowired
     private CouponTransactionSaveService couponTransactionSaveService;
-
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
 
     private Coupon coupon;
 
@@ -204,8 +197,6 @@ public class CouponDecreaseTest {
         Coupon persistedCoupon = couponRepository.findById(coupon.getId()).orElseThrow(IllegalArgumentException::new);
         assertThat(persistedCoupon.getAvailableStock()).isZero();
         log.debug("잔여 쿠폰 수량: " + persistedCoupon.getAvailableStock());
-
-        redisTemplate.delete(coupon.getId() + ":" + coupon.getName());
     }
 
     private void performConcurrencyTest(int threadCount, Long couponId, Consumer<Long> method) throws InterruptedException {

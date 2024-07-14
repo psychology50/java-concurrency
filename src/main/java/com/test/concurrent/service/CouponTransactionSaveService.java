@@ -30,5 +30,7 @@ public class CouponTransactionSaveService {
 
         if (sz != null)
             couponRepository.decreaseStock(couponId, sz.intValue());
+
+        redisTemplate.delete(key);
     }
 }
