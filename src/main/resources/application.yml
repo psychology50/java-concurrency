@@ -25,12 +25,12 @@ logging:
   level:
     ROOT: INFO
     org.hibernate: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.sql: debug
-    org.hibernate.type: trace
-    com.zaxxer.hikari.HikariConfig: DEBUG
-    org.springframework.orm: TRACE
+#    org.hibernate.type: trace
+#    com.zaxxer.hikari.HikariConfig: DEBUG
+#    org.springframework.orm: TRACE
     org.springframework.transaction: TRACE
-    com.zaxxer.hikari: TRACE
-    com.mysql.cj.jdbc: TRACE
-    org.springframework.jdbc: debug
+#    com.zaxxer.hikari: TRACE
+#    com.mysql.cj.jdbc: TRACE
+#    org.springframework.jdbc: debug
