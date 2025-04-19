@@ -14,7 +14,7 @@ public class CouponTooLongTimeDecreaseService {
     private final CouponRepository couponRepository;
 
     @DistributedLock(key = "'like_' + #couponId", waitTime = 5L, leaseTime = 5L, needNewTransaction = true)
-    public void run(Long couponId) {
+    public void mustFailRun(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
@@ -27,6 +27,14 @@ public class CouponTooLongTimeDecreaseService {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Thread interrupted", e);
         }
+
+        coupon.decreaseStock();
+    }
+
+    @DistributedLock(key = "'like_' + #couponId", waitTime = 5L, leaseTime = 5L, needNewTransaction = true)
+    public void run(Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰입니다."));
 
         coupon.decreaseStock();
     }
